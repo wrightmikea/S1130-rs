@@ -248,9 +248,8 @@ fn test_instruction_counting() {
     deck.run(10);
 }
 
-/// Future test template: this will be enabled when more instructions are implemented
+/// Test LD instruction with instruction deck
 #[test]
-#[ignore = "LD instruction not yet implemented"]
 fn test_ld_instruction_deck() {
     let deck = InstructionDeck::new(
         "LD instruction",
@@ -271,9 +270,8 @@ fn test_ld_instruction_deck() {
     deck.run(10);
 }
 
-/// Future test template: this will be enabled when arithmetic is implemented
+/// Test ADD instruction with instruction deck
 #[test]
-#[ignore = "Arithmetic instructions not yet implemented"]
 fn test_arithmetic_deck() {
     let deck = InstructionDeck::new(
         "ADD instruction",

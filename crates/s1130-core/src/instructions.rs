@@ -144,6 +144,8 @@ impl OpCode {
                 | OpCode::LDX
                 | OpCode::STX
                 | OpCode::MDX
+                | OpCode::LDS
+                | OpCode::STS
         )
     }
 }

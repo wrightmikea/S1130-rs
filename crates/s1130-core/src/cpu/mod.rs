@@ -5,6 +5,7 @@
 //! - Memory (word-addressable, 32K default)
 //! - State snapshots for external observation
 
+pub mod executor;
 pub mod memory;
 pub mod registers;
 pub mod state;
@@ -323,24 +324,27 @@ impl Cpu {
         let mut instr = self.fetch_and_decode()?;
 
         // Calculate effective address
-        let _effective_address = self.calculate_effective_address(&mut instr)?;
+        // For index register instructions (LDX, STX, MDX), don't use tag for address calculation
+        let effective_address = match instr.opcode {
+            OpCode::LDX | OpCode::STX | OpCode::MDX => {
+                // For these instructions, tag specifies WHICH register to operate on,
+                // not which register to use for addressing. Calculate EA without tag.
+                let saved_tag = instr.tag;
+                instr.tag = 0;
+                let ea = self.calculate_effective_address(&mut instr)?;
+                instr.tag = saved_tag;
+                ea
+            }
+            _ => self.calculate_effective_address(&mut instr)?,
+        };
 
         // Increment IAR by instruction size BEFORE execution
         // (branch instructions will override this)
         let instruction_size = instr.size_in_words();
         self.increment_iar(instruction_size);
 
-        // Execute instruction (to be implemented in Phase 2)
-        // For now, we'll just handle WAIT
-        match instr.opcode {
-            OpCode::WAIT => {
-                self.status_flags.wait = true;
-            }
-            _ => {
-                // Other instructions will be implemented in Phase 2
-                return Err(CpuError::InvalidInstruction(self.iar));
-            }
-        }
+        // Execute instruction
+        self.execute_instruction(&instr, effective_address)?;
 
         // Increment instruction counter
         self.increment_instruction_count();

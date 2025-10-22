@@ -60,6 +60,17 @@ fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
         });
     }
 
+    // Strip inline comments (everything after first '*' that's not at position 0)
+    let line = if let Some(comment_pos) = line.find('*') {
+        if comment_pos > 0 {
+            line[..comment_pos].trim()
+        } else {
+            line
+        }
+    } else {
+        line
+    };
+
     // Split line into tokens
     let parts: Vec<&str> = line.split_whitespace().collect();
 

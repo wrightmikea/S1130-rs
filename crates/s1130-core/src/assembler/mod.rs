@@ -103,7 +103,7 @@ impl Assembler {
                     self.location_counter = self.location_counter.wrapping_add(size);
                 }
                 parser::Operation::PseudoOp(pseudo) => {
-                    self.process_pseudo_pass1(pseudo, line_num)?;
+                    self.process_pseudo_pass1(pseudo, &line.operand, line_num)?;
                 }
                 parser::Operation::None => {}
             }
@@ -186,17 +186,31 @@ impl Assembler {
     }
 
     /// Process pseudo-op in pass 1
-    fn process_pseudo_pass1(&mut self, pseudo: &str, line_num: usize) -> Result<()> {
+    fn process_pseudo_pass1(
+        &mut self,
+        pseudo: &str,
+        operand: &Option<String>,
+        line_num: usize,
+    ) -> Result<()> {
         match pseudo {
             "ORG" => {
-                // ORG will be handled in pass 2 to get the address
+                // Update location counter and origin for pass 1
+                if let Some(ref addr_str) = operand {
+                    let addr = self.parse_expression(addr_str, line_num)?;
+                    self.location_counter = addr;
+                    self.origin = addr;
+                }
             }
             "DC" => {
                 // Define constant - advances location by 1
                 self.location_counter = self.location_counter.wrapping_add(1);
             }
             "BSS" => {
-                // Block started by symbol - will be handled in pass 2
+                // Block started by symbol - reserve space
+                if let Some(ref size_str) = operand {
+                    let size = self.parse_expression(size_str, line_num)?;
+                    self.location_counter = self.location_counter.wrapping_add(size);
+                }
             }
             "END" => {
                 // End of assembly
@@ -317,8 +331,13 @@ impl Assembler {
         };
 
         // Parse operand if present
+        // Note: LDX/STX/MDX have reversed operand format: "tag,address" not "address,tag"
         let (displacement, tag, indirect) = if let Some(ref op_str) = operand {
-            self.parse_operand(op_str, line_num)?
+            if matches!(mnemonic, "LDX" | "STX" | "MDX") {
+                self.parse_index_operand(op_str, line_num)?
+            } else {
+                self.parse_operand(op_str, line_num)?
+            }
         } else {
             (0, 0, false)
         };
@@ -396,6 +415,45 @@ impl Assembler {
         let displacement = self.parse_expression(address_str, line_num)?;
 
         Ok((displacement, tag, indirect))
+    }
+
+    /// Parse index register operand (format: "tag,address" for LDX/STX/MDX)
+    fn parse_index_operand(&self, operand: &str, line_num: usize) -> Result<(u16, u8, bool)> {
+        let operand = operand.trim();
+
+        // Check for indirect addressing: /address or *address
+        let (indirect, operand) = if operand.starts_with('/') || operand.starts_with('*') {
+            (true, &operand[1..])
+        } else {
+            (false, operand)
+        };
+
+        // For index instructions, format is "tag,address" (reversed from normal)
+        if let Some(comma_pos) = operand.find(',') {
+            let tag_str = operand[..comma_pos].trim();
+            let address_str = &operand[comma_pos + 1..].trim();
+
+            let tag = tag_str
+                .parse::<u8>()
+                .map_err(|_| AssemblerError::SyntaxError {
+                    line: line_num + 1,
+                    message: format!("Invalid index register: {}", tag_str),
+                })?;
+
+            if tag > 3 {
+                return Err(AssemblerError::SyntaxError {
+                    line: line_num + 1,
+                    message: format!("Index register must be 0-3, got {}", tag),
+                });
+            }
+
+            let displacement = self.parse_expression(address_str, line_num)?;
+            Ok((displacement, tag, indirect))
+        } else {
+            // No comma - just an address with tag=0
+            let displacement = self.parse_expression(operand, line_num)?;
+            Ok((displacement, 0, indirect))
+        }
     }
 
     /// Parse numeric expression (supports decimal, hex, octal, and symbols)

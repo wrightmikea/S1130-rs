@@ -10,6 +10,12 @@
 //!    - Device generates interrupt for each character
 //!    - High CPU overhead
 
+pub mod keyboard;
+pub mod printer;
+
+pub use keyboard::DeviceConsoleKeyboard;
+pub use printer::DeviceConsolePrinter;
+
 use crate::error::CpuError;
 
 /// Device function codes (3 bits, values 0-7)
@@ -132,6 +138,12 @@ pub trait Device: Send + Sync {
 
     /// Reset device to initial state
     fn reset(&mut self);
+
+    /// Support downcasting to concrete types
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Support mutable downcasting to concrete types
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
 #[cfg(test)]

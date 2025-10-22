@@ -60,9 +60,9 @@ impl Cpu {
             // Control Instructions
             OpCode::WAIT => self.execute_wait(),
 
-            // I/O Instructions (Phase 4)
-            OpCode::XIO => Err(CpuError::InvalidInstruction(self.iar)),
-            OpCode::SDS => Err(CpuError::InvalidInstruction(self.iar)),
+            // I/O Instructions
+            OpCode::XIO => self.execute_xio(effective_address),
+            OpCode::SDS => Err(CpuError::InvalidInstruction(self.iar)), // TODO: Phase 4
         }
     }
 
@@ -479,6 +479,26 @@ impl Cpu {
     /// WAIT - Halt CPU
     fn execute_wait(&mut self) -> Result<()> {
         self.set_wait(true);
+        Ok(())
+    }
+
+    // === I/O Instructions ===
+
+    /// XIO - Execute I/O
+    ///
+    /// This instruction decodes an IOCC structure from memory and executes
+    /// the I/O operation on the specified device.
+    ///
+    /// The effective address points to the IOCC structure (2 words):
+    /// - Word 0: WCA (Word Count Address)
+    /// - Word 1: Device code + Function + Modifiers
+    fn execute_xio(&mut self, address: u16) -> Result<()> {
+        // Decode IOCC from memory
+        self.decode_iocc(address)?;
+
+        // Execute the I/O operation
+        self.execute_iocc()?;
+
         Ok(())
     }
 }

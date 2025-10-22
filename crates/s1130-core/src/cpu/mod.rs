@@ -415,6 +415,11 @@ impl Cpu {
         self.devices.get(&device_code).map(|d| &**d)
     }
 
+    /// Get a mutable reference to a device by device code (for testing/inspection)
+    pub fn get_device_mut_ref(&mut self, device_code: u8) -> Option<&mut Box<dyn Device>> {
+        self.devices.get_mut(&device_code)
+    }
+
     // === IOCC Handling ===
 
     /// Decode an IOCC structure from memory
@@ -432,7 +437,7 @@ impl Cpu {
     pub fn decode_iocc(&mut self, address: u16) -> Result<()> {
         // Read both words of IOCC
         let word1 = self.read_memory(address as usize)?;
-        let word2 = self.read_memory((address | 1) as usize)?; // Force odd address
+        let word2 = self.read_memory((address + 1) as usize)?;
 
         // Decode IOCC
         let iocc = Iocc::decode(word1, word2)?;

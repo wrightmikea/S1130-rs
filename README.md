@@ -1,81 +1,87 @@
-S1130
-=====
+# S1130-rs: IBM 1130 Emulator in Rust
 
-## IBM 1130 Emulator in C#
+A pure Rust implementation of the IBM 1130 computer emulator with WebAssembly support.
 
-This is an IBM 1130 emulator modified to build and run with .NET Core, compatible with Linux, Mac, and Windows. 
+## Overview
 
-The emulator provides a complete IBM 1130 system simulation including:
-- CPU instruction set implementation
-- Device emulation (2501 card reader, 2310 disk drive)
-- Memory management
-- Interrupt handling
-
-## Getting Started
-
-### Prerequisites
-
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download) or later
-- A C# compatible IDE or text editor
-
-### Building the Project
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/semuhphor/S1130.git
-   cd S1130
-   ```
-
-2. Restore dependencies and build:
-   ```bash
-   dotnet build
-   ```
-
-### Running Tests
-
-Execute the comprehensive test suite:
-```bash
-dotnet test
-```
-
-The project includes 335+ unit tests covering CPU instructions, device operations, and system integration scenarios. Test execution typically completes in under 2 seconds.
-
-#### Test Output
-- **Passed/Failed/Skipped counts**: Summary of test execution results
-- **Performance metrics**: The test suite includes performance benchmarks (e.g., "1M Instructions in 1000ms")
-- **Coverage**: Tests validate instruction execution, device behavior, and edge cases
+This project is a complete rewrite of the S1130 IBM 1130 emulator, originally implemented in C# and JavaScript, now ported to pure Rust with a Yew-based WebAssembly frontend. The goal is to create a high-performance, cross-platform emulator that can run both natively and in web browsers.
 
 ## Project Status
 
-- ✅ **CPU Core**: Fully functional instruction set implementation
-- ✅ **2501 Card Reader**: Complete with test coverage
-- 🚧 **2310 Disk Drive**: Partial implementation in progress
-- 📋 **PowerShell Integration**: Legacy script available but untested
+**Currently in development - Phase 4: Device Implementation**
 
-## Contributing
+### Completed Phases
+- ✅ **Phase 0**: Project scaffolding and workspace setup
+- ✅ **Phase 1**: Instruction decoding (28 opcodes)
+- ✅ **Phase 2**: Instruction execution (34 instruction tests passing)
+- ✅ **Phase 3**: Two-pass assembler (all tests passing)
+- 🔄 **Phase 4**: I/O Device implementation (in progress)
+  - ✅ Device system foundation and IOCC handling
+  - ✅ XIO instruction execution
+  - ✅ Console keyboard device (character-mode)
+  - ✅ Console printer device (character-mode)
+  - 🔄 Integration tests (in progress)
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
-- Code style and conventions  
-- Testing requirements
-- Pull request process
+### Planned Features
+- Console keyboard and printer devices (in progress)
+- Card reader/punch devices
+- Disk storage devices
+- Tape devices
+- Line printer
+- Vector graphics displays (planned)
+- Web-based UI using Yew framework
 
-### Development Guidelines
+## Architecture
 
-- **Test-Driven Development**: All new code should include comprehensive unit tests
-- **Documentation**: Public APIs should include XML documentation comments
-- **Error Handling**: Exception-prone areas require robust error handling and clear failure modes
+The project is organized as a Rust workspace with multiple crates:
 
-## Useful Links
+- **s1130-core**: Core emulator logic (CPU, memory, devices, assembler)
+- **s1130-wasm**: WebAssembly bindings
+- **s1130-ui**: Yew-based web frontend
 
-- [Getting started with .NET Core](https://www.microsoft.com/net/core)
-- [Unit testing with .NET Core](https://docs.microsoft.com/en-us/dotnet/articles/core/testing/unit-testing-with-dotnet-test)
-- [IBM 1130 Documentation](https://en.wikipedia.org/wiki/IBM_1130) (Historical reference)
+## Building
+
+### Prerequisites
+- Rust 1.70 or later
+- wasm-pack (for WebAssembly builds)
+
+### Build Commands
+
+```bash
+# Build all crates
+cargo build
+
+# Run tests
+cargo test
+
+# Build for WebAssembly
+cd crates/s1130-wasm
+wasm-pack build --target web
+```
+
+## Documentation
+
+- [Implementation Plan](./ImplementationPlan.md) - Detailed phase-by-phase implementation roadmap
+- [Architecture Documentation](./docs/DMS-Architecture.md) - System architecture overview
+- [Phase 0 Documentation](./docs/phase-0-workspace.md) - Workspace setup details
+- [API Documentation](./docs/) - Additional technical documentation
+
+## Original Project
+
+This is a port of the original S1130 emulator. The original C#/JavaScript implementation and documentation can be found in the [`archive/`](./archive/) directory.
+
+**Original Repository**: [IBM 1130 Emulator (C#/JS)](https://github.com/wrightmikea/S1130) *(if publicly available)*
 
 ## License
 
-This project maintains the original licensing terms. Please see the repository for specific license information.
+MIT License - See [LICENSE](./LICENSE) file for details.
 
----
+## Contributing
 
-Thanks,  
-Bob Flanders and contributors
+This project is currently under active development. Contributions, bug reports, and suggestions are welcome!
+
+## References
+
+- IBM 1130 Functional Characteristics Manual
+- IBM 1130 Principles of Operation
+- Original S1130 emulator documentation (see `archive/`)

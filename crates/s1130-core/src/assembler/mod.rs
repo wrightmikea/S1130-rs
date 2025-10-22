@@ -363,6 +363,7 @@ impl Assembler {
                 | "MDX"
                 | "LDS"
                 | "STS"
+                | "XIO"
         );
 
         if is_long {

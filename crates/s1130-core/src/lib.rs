@@ -29,4 +29,5 @@ pub mod instructions;
 
 // Re-export commonly used types
 pub use cpu::{Cpu, CpuState};
-pub use error::{CpuError, InstructionError, Result};
+pub use error::{AssemblerError, CpuError, DeviceError, InstructionError, Result};
+pub use instructions::{InstructionFormat, InstructionInfo, OpCode};

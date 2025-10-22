@@ -13,7 +13,8 @@ pub use memory::Memory;
 pub use registers::{IndexRegisters, StatusFlags};
 pub use state::CpuState;
 
-use crate::error::Result;
+use crate::error::{CpuError, Result};
+use crate::instructions::{InstructionInfo, OpCode};
 
 /// IBM 1130 Central Processing Unit
 ///
@@ -242,6 +243,131 @@ impl Cpu {
     pub fn increment_instruction_count(&mut self) {
         self.instruction_count += 1;
     }
+
+    // === Fetch-Decode-Execute Cycle ===
+
+    /// Fetch instruction from memory at current IAR
+    ///
+    /// Fetches one or two words depending on instruction format.
+    /// Does NOT increment IAR (that happens after execution).
+    ///
+    /// # Returns
+    /// Tuple of (word1, Option<word2>) where word2 is present for long format instructions
+    pub fn fetch_instruction(&self) -> Result<(u16, Option<u16>)> {
+        let word1 = self.read_memory(self.iar as usize)?;
+
+        // Peek at opcode to determine if we need a second word
+        let opcode =
+            OpCode::from_word(word1).map_err(|_| CpuError::InvalidInstruction(self.iar))?;
+
+        let word2 = if opcode.is_long_format() {
+            Some(self.read_memory((self.iar + 1) as usize)?)
+        } else {
+            None
+        };
+
+        Ok((word1, word2))
+    }
+
+    /// Fetch and decode instruction at current IAR
+    ///
+    /// # Returns
+    /// Decoded instruction information ready for execution
+    pub fn fetch_and_decode(&self) -> Result<InstructionInfo> {
+        let (word1, word2) = self.fetch_instruction()?;
+
+        InstructionInfo::decode(word1, word2).map_err(|_| CpuError::InvalidInstruction(self.iar))
+    }
+
+    /// Calculate effective address for an instruction
+    ///
+    /// This helper method calculates the effective address by:
+    /// 1. Starting with the instruction's displacement
+    /// 2. Adding the index register value if tag != 0
+    /// 3. Following indirect addressing if the indirect flag is set
+    pub fn calculate_effective_address(&self, instr: &mut InstructionInfo) -> Result<u16> {
+        use crate::error::InstructionError;
+
+        let index_value = self.index_registers.get(instr.tag);
+
+        instr
+            .calculate_effective_address(index_value, |addr| {
+                self.read_memory(addr as usize)
+                    .map_err(InstructionError::MemoryError)
+            })
+            .map_err(|e| match e {
+                InstructionError::MemoryError(cpu_err) => cpu_err,
+                _ => CpuError::InvalidInstruction(self.iar),
+            })
+    }
+
+    /// Execute one instruction at current IAR
+    ///
+    /// This is the main execution method that:
+    /// 1. Fetches instruction from memory at IAR
+    /// 2. Decodes the instruction
+    /// 3. Calculates effective address
+    /// 4. Executes the instruction (to be implemented in Phase 2)
+    /// 5. Increments IAR
+    /// 6. Increments instruction counter
+    ///
+    /// # Returns
+    /// Ok(()) if instruction executed successfully, Err if execution failed
+    pub fn step(&mut self) -> Result<()> {
+        // Check if CPU is in wait state
+        if self.status_flags.wait {
+            return Err(CpuError::WaitState);
+        }
+
+        // Fetch and decode
+        let mut instr = self.fetch_and_decode()?;
+
+        // Calculate effective address
+        let _effective_address = self.calculate_effective_address(&mut instr)?;
+
+        // Increment IAR by instruction size BEFORE execution
+        // (branch instructions will override this)
+        let instruction_size = instr.size_in_words();
+        self.increment_iar(instruction_size);
+
+        // Execute instruction (to be implemented in Phase 2)
+        // For now, we'll just handle WAIT
+        match instr.opcode {
+            OpCode::WAIT => {
+                self.status_flags.wait = true;
+            }
+            _ => {
+                // Other instructions will be implemented in Phase 2
+                return Err(CpuError::InvalidInstruction(self.iar));
+            }
+        }
+
+        // Increment instruction counter
+        self.increment_instruction_count();
+
+        Ok(())
+    }
+
+    /// Run CPU for a specified number of steps or until WAIT
+    ///
+    /// # Arguments
+    /// * `max_steps` - Maximum number of instructions to execute
+    ///
+    /// # Returns
+    /// Number of instructions actually executed
+    pub fn run(&mut self, max_steps: u64) -> u64 {
+        let mut steps = 0;
+
+        for _ in 0..max_steps {
+            match self.step() {
+                Ok(()) => steps += 1,
+                Err(CpuError::WaitState) => break,
+                Err(_) => break,
+            }
+        }
+
+        steps
+    }
 }
 
 impl Default for Cpu {
@@ -408,5 +534,123 @@ mod tests {
 
         cpu.increment_instruction_count();
         assert_eq!(cpu.get_instruction_count(), 2);
+    }
+
+    #[test]
+    fn test_fetch_instruction_short_format() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write WAIT instruction (short format)
+        cpu.write_memory(0x0100, 0xB000).unwrap();
+
+        let (word1, word2) = cpu.fetch_instruction().unwrap();
+        assert_eq!(word1, 0xB000);
+        assert_eq!(word2, None);
+    }
+
+    #[test]
+    fn test_fetch_instruction_long_format() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write LD instruction (long format) at 0x0100
+        cpu.write_memory(0x0100, 0x6000).unwrap(); // LD opcode
+        cpu.write_memory(0x0101, 0x1234).unwrap(); // displacement
+
+        let (word1, word2) = cpu.fetch_instruction().unwrap();
+        assert_eq!(word1, 0x6000);
+        assert_eq!(word2, Some(0x1234));
+    }
+
+    #[test]
+    fn test_fetch_and_decode() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write LD instruction
+        cpu.write_memory(0x0100, 0x6000).unwrap();
+        cpu.write_memory(0x0101, 0x5678).unwrap();
+
+        let instr = cpu.fetch_and_decode().unwrap();
+        assert_eq!(instr.opcode, OpCode::LD);
+        assert_eq!(instr.displacement, 0x5678);
+    }
+
+    #[test]
+    fn test_calculate_effective_address() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write LD with tag=1 (XR1)
+        cpu.write_memory(0x0100, 0x6040).unwrap(); // LD with tag=1
+        cpu.write_memory(0x0101, 0x0200).unwrap(); // displacement
+
+        // Set XR1 to 0x0050
+        cpu.set_index_register(1, 0x0050);
+
+        let mut instr = cpu.fetch_and_decode().unwrap();
+        let ea = cpu.calculate_effective_address(&mut instr).unwrap();
+
+        // EA should be 0x0200 + 0x0050 = 0x0250
+        assert_eq!(ea, 0x0250);
+    }
+
+    #[test]
+    fn test_step_wait_instruction() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write WAIT instruction
+        cpu.write_memory(0x0100, 0xB000).unwrap();
+
+        // Execute one step
+        let result = cpu.step();
+        assert!(result.is_ok());
+
+        // CPU should be in wait state
+        assert!(cpu.get_wait());
+
+        // IAR should have advanced by 1 (short format)
+        assert_eq!(cpu.get_iar(), 0x0101);
+
+        // Instruction count should be 1
+        assert_eq!(cpu.get_instruction_count(), 1);
+
+        // Second step should fail with WaitState
+        let result = cpu.step();
+        assert!(result.is_err());
+        match result {
+            Err(CpuError::WaitState) => {}
+            _ => panic!("Expected WaitState error"),
+        }
+    }
+
+    #[test]
+    fn test_run_until_wait() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write multiple WAIT instructions
+        cpu.write_memory(0x0100, 0xB000).unwrap();
+        cpu.write_memory(0x0101, 0xB000).unwrap();
+        cpu.write_memory(0x0102, 0xB000).unwrap();
+
+        // Run for up to 10 steps (should stop at first WAIT)
+        let steps = cpu.run(10);
+        assert_eq!(steps, 1);
+        assert!(cpu.get_wait());
+    }
+
+    #[test]
+    fn test_fetch_instruction_invalid_opcode() {
+        let mut cpu = Cpu::new();
+        cpu.set_iar(0x0100);
+
+        // Write invalid opcode
+        cpu.write_memory(0x0100, 0xFF00).unwrap();
+
+        let result = cpu.fetch_instruction();
+        assert!(result.is_err());
     }
 }

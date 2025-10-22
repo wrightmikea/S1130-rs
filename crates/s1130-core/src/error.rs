@@ -33,6 +33,10 @@ pub enum InstructionError {
     #[error("Invalid opcode: {0:#04x}")]
     InvalidOpcode(u8),
 
+    /// Missing displacement word for long format instruction
+    #[error("Missing displacement word for long format instruction")]
+    MissingDisplacement,
+
     /// Memory access error during instruction execution
     #[error("Memory access error: {0}")]
     MemoryError(#[from] CpuError),

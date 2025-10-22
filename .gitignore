@@ -158,6 +158,24 @@ $RECYCLE.BIN/
 # Mac desktop service store files
 .DS_Store
 
+# Rust-specific
+/target/
+Cargo.lock
+**/*.rs.bk
+
+# Trunk build output
+crates/s1130-ui/dist/
+
+# Coverage
+cobertura.xml
+tarpaulin-report.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # Build and Release Folders
 bin-debug/
 bin-release/

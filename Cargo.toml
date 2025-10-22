@@ -1,0 +1,26 @@
+[workspace]
+members = [
+    "crates/s1130-core",
+    "crates/s1130-wasm",
+    "crates/s1130-ui",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/wrightmikea/S1130-rs"
+authors = ["Mike Wright <wrightmikea@gmail.com>"]
+
+[workspace.dependencies]
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Link-time optimization
+codegen-units = 1   # Better optimization
+strip = true        # Strip symbols
+panic = "abort"     # Smaller binary

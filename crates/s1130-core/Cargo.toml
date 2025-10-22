@@ -1,0 +1,21 @@
+[package]
+name = "s1130-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Core IBM 1130 emulator library"
+
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+proptest = "1.4"
+criterion = "0.5"
+
+# Benchmarks will be added in Phase 2
+# [[bench]]
+# name = "cpu_benchmark"
+# harness = false

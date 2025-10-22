@@ -54,9 +54,26 @@ cargo build
 # Run tests
 cargo test
 
-# Build for WebAssembly
+# Build for WebAssembly (using script)
+./scripts/build.sh
+
+# Or manually:
 cd crates/s1130-wasm
 wasm-pack build --target web
+```
+
+### Development Server
+
+```bash
+# Start the development server on port 1130
+./scripts/serve.sh
+
+# Then open http://localhost:1130 in your browser
+```
+
+**Note**: The serve script requires `basic-http-server`:
+```bash
+cargo install basic-http-server
 ```
 
 ## Documentation

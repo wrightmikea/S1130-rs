@@ -74,40 +74,85 @@ For local testing, install `basic-http-server`:
 cargo install basic-http-server
 ```
 
+## Quick Start
+
+After installing the prerequisites (see [Setup](#setup) section below):
+
+```bash
+# Clone the repository
+git clone https://github.com/wrightmikea/S1130-rs.git
+cd S1130-rs
+
+# Run tests to verify everything works
+cargo test
+
+# Build WebAssembly (optional - only needed for web UI)
+./scripts/build.sh
+
+# Start development server (optional - only for web UI)
+./scripts/serve.sh
+# Then open http://localhost:1130 in your browser
+```
+
 ## Building
 
 ### Prerequisites
 - Rust 1.70 or later
-- wasm-pack (for WebAssembly builds)
-- basic-http-server (for development server)
+- wasm-pack (for WebAssembly builds - optional)
+- basic-http-server (for development server - optional)
 
-### Build Commands
+### Native Build
 
 ```bash
-# Build all crates
+# Build all crates (native/library only)
 cargo build
+
+# Build optimized release version
+cargo build --release
 
 # Run tests
 cargo test
 
-# Build for WebAssembly (using script)
-./scripts/build.sh
+# Run with no warnings from clippy
+cargo clippy --all -- -D warnings
 
-# Or manually:
-cd crates/s1130-wasm
-wasm-pack build --target web
+# Format code
+cargo fmt --all
 ```
 
-### Development Server
+### WebAssembly Build
+
+The project includes helper scripts in the `./scripts/` directory:
+
+#### `./scripts/build.sh`
+Builds the WebAssembly package using wasm-pack:
+- Compiles `s1130-wasm` crate to WebAssembly
+- Generates JavaScript bindings
+- Outputs to `./pkg/` directory
+- Target: web (ES modules)
 
 ```bash
-# Start the development server on port 1130
-./scripts/serve.sh
-
-# Then open http://localhost:1130 in your browser
+./scripts/build.sh
 ```
 
-**Note**: The serve script requires `basic-http-server`:
+Manual equivalent:
+```bash
+cd crates/s1130-wasm
+wasm-pack build --target web --out-dir ../../pkg
+```
+
+#### `./scripts/serve.sh`
+Starts a local development server:
+- Serves the `s1130-ui` crate on port **1130** (matching the IBM 1130!)
+- Accessible at `http://localhost:1130`
+- Binds to `0.0.0.0` (accessible from network)
+- Requires `basic-http-server` to be installed
+
+```bash
+./scripts/serve.sh
+```
+
+**Note**: Install the server first if needed:
 ```bash
 cargo install basic-http-server
 ```

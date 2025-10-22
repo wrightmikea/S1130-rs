@@ -1,0 +1,228 @@
+//! Parser for IBM 1130 Assembly Language
+//!
+//! Parses tokens into structured assembly lines.
+
+use crate::error::AssemblerError;
+
+/// Result type for assembler operations
+pub type Result<T> = std::result::Result<T, AssemblerError>;
+
+/// Parsed assembly line
+#[derive(Debug, Clone)]
+pub struct ParsedLine {
+    /// Optional label
+    pub label: Option<String>,
+
+    /// Operation (instruction or pseudo-op)
+    pub operation: Operation,
+
+    /// Optional operand
+    pub operand: Option<String>,
+}
+
+/// Operation type
+#[derive(Debug, Clone)]
+pub enum Operation {
+    /// Machine instruction
+    Instruction(String),
+
+    /// Pseudo-operation
+    PseudoOp(String),
+
+    /// No operation (comment or empty line)
+    None,
+}
+
+/// Parse source code into lines
+pub fn parse_source(source: &str) -> Result<Vec<ParsedLine>> {
+    let mut lines = Vec::new();
+
+    for (line_num, line_text) in source.lines().enumerate() {
+        let parsed = parse_line(line_text, line_num + 1)?;
+        if !matches!(parsed.operation, Operation::None) || parsed.label.is_some() {
+            lines.push(parsed);
+        }
+    }
+
+    Ok(lines)
+}
+
+/// Parse a single line
+fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
+    let line = line.trim();
+
+    // Skip empty lines and comments
+    if line.is_empty() || line.starts_with('*') {
+        return Ok(ParsedLine {
+            label: None,
+            operation: Operation::None,
+            operand: None,
+        });
+    }
+
+    // Split line into tokens
+    let parts: Vec<&str> = line.split_whitespace().collect();
+
+    if parts.is_empty() {
+        return Ok(ParsedLine {
+            label: None,
+            operation: Operation::None,
+            operand: None,
+        });
+    }
+
+    let mut label = None;
+    let mut operation = Operation::None;
+    let mut operand = None;
+
+    // First token could be a label or instruction
+    let first = parts[0];
+
+    if is_instruction(first) || is_pseudo_op(first) {
+        // No label, starts with operation
+        if is_instruction(first) {
+            operation = Operation::Instruction(first.to_uppercase());
+        } else {
+            operation = Operation::PseudoOp(first.to_uppercase());
+        }
+
+        // Rest is operand
+        if parts.len() > 1 {
+            operand = Some(parts[1..].join(" "));
+        }
+    } else {
+        // First token is a label
+        label = Some(first.to_string());
+
+        if parts.len() > 1 {
+            let second = parts[1];
+
+            if is_instruction(second) {
+                operation = Operation::Instruction(second.to_uppercase());
+
+                if parts.len() > 2 {
+                    operand = Some(parts[2..].join(" "));
+                }
+            } else if is_pseudo_op(second) {
+                operation = Operation::PseudoOp(second.to_uppercase());
+
+                if parts.len() > 2 {
+                    operand = Some(parts[2..].join(" "));
+                }
+            } else {
+                return Err(AssemblerError::SyntaxError {
+                    line: line_num,
+                    message: format!("Expected instruction or pseudo-op, got: {}", second),
+                });
+            }
+        }
+    }
+
+    Ok(ParsedLine {
+        label,
+        operation,
+        operand,
+    })
+}
+
+/// Check if string is a valid instruction
+fn is_instruction(s: &str) -> bool {
+    matches!(
+        s.to_uppercase().as_str(),
+        "LD" | "LDD"
+            | "STO"
+            | "STD"
+            | "A"
+            | "AD"
+            | "S"
+            | "SD"
+            | "M"
+            | "D"
+            | "AND"
+            | "OR"
+            | "EOR"
+            | "SLA"
+            | "SLCA"
+            | "SRA"
+            | "SRT"
+            | "BSI"
+            | "BSC"
+            | "BC"
+            | "LDX"
+            | "STX"
+            | "MDX"
+            | "WAIT"
+            | "LDS"
+            | "STS"
+            | "XIO"
+            | "SDS"
+    )
+}
+
+/// Check if string is a pseudo-op
+fn is_pseudo_op(s: &str) -> bool {
+    matches!(
+        s.to_uppercase().as_str(),
+        "ORG" | "DC" | "BSS" | "END" | "EQU"
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_simple_instruction() {
+        let line = parse_line("LD 100", 1).unwrap();
+        assert!(line.label.is_none());
+        assert!(matches!(line.operation, Operation::Instruction(_)));
+        assert_eq!(line.operand, Some("100".to_string()));
+    }
+
+    #[test]
+    fn test_parse_with_label() {
+        let line = parse_line("START LD 100", 1).unwrap();
+        assert_eq!(line.label, Some("START".to_string()));
+        assert!(matches!(line.operation, Operation::Instruction(_)));
+        assert_eq!(line.operand, Some("100".to_string()));
+    }
+
+    #[test]
+    fn test_parse_pseudo_op() {
+        let line = parse_line("ORG 0x100", 1).unwrap();
+        assert!(line.label.is_none());
+        assert!(matches!(line.operation, Operation::PseudoOp(_)));
+        assert_eq!(line.operand, Some("0x100".to_string()));
+    }
+
+    #[test]
+    fn test_parse_label_only() {
+        let line = parse_line("LABEL", 1).unwrap();
+        assert_eq!(line.label, Some("LABEL".to_string()));
+        assert!(matches!(line.operation, Operation::None));
+    }
+
+    #[test]
+    fn test_parse_comment() {
+        let line = parse_line("* This is a comment", 1).unwrap();
+        assert!(matches!(line.operation, Operation::None));
+    }
+
+    #[test]
+    fn test_parse_empty_line() {
+        let line = parse_line("", 1).unwrap();
+        assert!(matches!(line.operation, Operation::None));
+    }
+
+    #[test]
+    fn test_parse_indirect_operand() {
+        let line = parse_line("LD /100", 1).unwrap();
+        assert_eq!(line.operand, Some("/100".to_string()));
+    }
+
+    #[test]
+    fn test_parse_indexed_operand() {
+        let line = parse_line("LD 100,1", 1).unwrap();
+        assert_eq!(line.operand, Some("100,1".to_string()));
+    }
+}

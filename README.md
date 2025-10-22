@@ -39,11 +39,47 @@ The project is organized as a Rust workspace with multiple crates:
 - **s1130-wasm**: WebAssembly bindings
 - **s1130-ui**: Yew-based web frontend
 
+## Setup
+
+### Installing Rust
+
+If you don't have Rust installed, install it using [rustup](https://rustup.rs/):
+
+```bash
+# On macOS/Linux
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# On Windows, download and run rustup-init.exe from https://rustup.rs/
+```
+
+After installation, restart your terminal and verify:
+```bash
+rustc --version
+cargo --version
+```
+
+### Installing WebAssembly Tools
+
+For WebAssembly development, install `wasm-pack`:
+
+```bash
+cargo install wasm-pack
+```
+
+### Installing Development Server
+
+For local testing, install `basic-http-server`:
+
+```bash
+cargo install basic-http-server
+```
+
 ## Building
 
 ### Prerequisites
 - Rust 1.70 or later
 - wasm-pack (for WebAssembly builds)
+- basic-http-server (for development server)
 
 ### Build Commands
 

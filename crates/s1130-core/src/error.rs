@@ -17,6 +17,10 @@ pub enum CpuError {
     #[error("Device error: {0}")]
     DeviceError(String),
 
+    /// Invalid device code
+    #[error("Invalid device code: {0}")]
+    InvalidDevice(u8),
+
     /// Execution halted by WAIT instruction
     #[error("Execution halted by WAIT instruction")]
     WaitState,

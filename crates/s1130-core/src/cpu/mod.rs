@@ -14,8 +14,10 @@ pub use memory::Memory;
 pub use registers::{IndexRegisters, StatusFlags};
 pub use state::CpuState;
 
+use crate::devices::{Device, Iocc};
 use crate::error::{CpuError, Result};
 use crate::instructions::{InstructionInfo, OpCode};
+use std::collections::HashMap;
 
 /// IBM 1130 Central Processing Unit
 ///
@@ -43,6 +45,12 @@ pub struct Cpu {
 
     /// Instruction execution counter
     instruction_count: u64,
+
+    /// Attached I/O devices (device_code -> device)
+    devices: HashMap<u8, Box<dyn Device>>,
+
+    /// Last decoded IOCC (for XIO instruction)
+    iocc: Option<Iocc>,
 }
 
 impl Cpu {
@@ -61,6 +69,8 @@ impl Cpu {
             status_flags: StatusFlags::new(),
             memory: Memory::with_size(size),
             instruction_count: 0,
+            devices: HashMap::new(),
+            iocc: None,
         }
     }
 
@@ -371,6 +381,97 @@ impl Cpu {
         }
 
         steps
+    }
+
+    // === Device Management ===
+
+    /// Attach an I/O device to the CPU
+    ///
+    /// # Arguments
+    /// * `device` - The device to attach
+    ///
+    /// # Returns
+    /// * `Ok(())` if device attached successfully
+    /// * `Err(CpuError)` if device code already in use
+    pub fn attach_device(&mut self, device: Box<dyn Device>) -> Result<()> {
+        let device_code = device.device_code();
+        if self.devices.contains_key(&device_code) {
+            return Err(CpuError::DeviceError(format!(
+                "Device code {} already in use",
+                device_code
+            )));
+        }
+        self.devices.insert(device_code, device);
+        Ok(())
+    }
+
+    /// Detach a device by device code
+    pub fn detach_device(&mut self, device_code: u8) -> Option<Box<dyn Device>> {
+        self.devices.remove(&device_code)
+    }
+
+    /// Get a reference to a device by device code
+    pub fn get_device(&self, device_code: u8) -> Option<&dyn Device> {
+        self.devices.get(&device_code).map(|d| &**d)
+    }
+
+    // === IOCC Handling ===
+
+    /// Decode an IOCC structure from memory
+    ///
+    /// This is called by the XIO instruction. The IOCC is a 2-word structure:
+    /// - Word 0 (even address): WCA (Word Count Address)
+    /// - Word 1 (odd address): Device code + Function + Modifiers
+    ///
+    /// # Arguments
+    /// * `address` - Starting address of IOCC (should be even)
+    ///
+    /// # Returns
+    /// * `Ok(())` if IOCC decoded successfully
+    /// * `Err(CpuError)` if decode failed
+    pub fn decode_iocc(&mut self, address: u16) -> Result<()> {
+        // Read both words of IOCC
+        let word1 = self.read_memory(address as usize)?;
+        let word2 = self.read_memory((address | 1) as usize)?; // Force odd address
+
+        // Decode IOCC
+        let iocc = Iocc::decode(word1, word2)?;
+        self.iocc = Some(iocc);
+
+        Ok(())
+    }
+
+    /// Execute the last decoded IOCC
+    ///
+    /// This is called after decode_iocc to actually execute the I/O operation.
+    ///
+    /// # Returns
+    /// * `Ok(())` if IOCC executed successfully
+    /// * `Err(CpuError)` if execution failed or no device found
+    pub fn execute_iocc(&mut self) -> Result<()> {
+        let iocc = self
+            .iocc
+            .ok_or_else(|| CpuError::DeviceError("No IOCC decoded".to_string()))?;
+
+        // Get device code before borrowing
+        let device_code = iocc.device_code;
+
+        // Check device exists
+        if !self.devices.contains_key(&device_code) {
+            return Err(CpuError::InvalidDevice(device_code));
+        }
+
+        // Execute command - use explicit field access to allow split borrows
+        let device = self.devices.get_mut(&device_code).unwrap();
+        let memory_slice = self.memory.as_mut_slice();
+        device.execute_iocc(&iocc, memory_slice)?;
+
+        Ok(())
+    }
+
+    /// Get the last decoded IOCC
+    pub fn get_iocc(&self) -> Option<&Iocc> {
+        self.iocc.as_ref()
     }
 }
 

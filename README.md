@@ -60,19 +60,13 @@ cargo --version
 
 ### Installing WebAssembly Tools
 
-For WebAssembly development, install `wasm-pack`:
+For the Yew-based web UI, install `trunk` (the build tool for Rust + WebAssembly web applications):
 
 ```bash
-cargo install wasm-pack
+cargo install trunk
 ```
 
-### Installing Development Server
-
-For local testing, install `basic-http-server`:
-
-```bash
-cargo install basic-http-server
-```
+**Note**: `trunk` handles both WebAssembly compilation and the development server, replacing the need for separate `wasm-pack` and `basic-http-server` tools.
 
 ## Quick Start
 
@@ -98,8 +92,7 @@ cargo test
 
 ### Prerequisites
 - Rust 1.70 or later
-- wasm-pack (for WebAssembly builds - optional)
-- basic-http-server (for development server - optional)
+- trunk (for Yew web UI builds and development server - optional)
 
 ### Native Build
 
@@ -125,11 +118,11 @@ cargo fmt --all
 The project includes helper scripts in the `./scripts/` directory:
 
 #### `./scripts/build.sh`
-Builds the WebAssembly package using wasm-pack:
-- Compiles `s1130-wasm` crate to WebAssembly
-- Generates JavaScript bindings
-- Outputs to `./pkg/` directory
-- Target: web (ES modules)
+Builds the Yew web application using Trunk:
+- Compiles `s1130-ui` crate to WebAssembly
+- Processes HTML, CSS, and static assets
+- Outputs to `./crates/s1130-ui/dist/` directory
+- Optimized for production
 
 ```bash
 ./scripts/build.sh
@@ -137,24 +130,25 @@ Builds the WebAssembly package using wasm-pack:
 
 Manual equivalent:
 ```bash
-cd crates/s1130-wasm
-wasm-pack build --target web --out-dir ../../pkg
+cd crates/s1130-ui
+trunk build --release
 ```
 
 #### `./scripts/serve.sh`
-Starts a local development server:
+Starts Trunk's development server:
 - Serves the `s1130-ui` crate on port **1130** (matching the IBM 1130!)
 - Accessible at `http://localhost:1130`
 - Binds to `0.0.0.0` (accessible from network)
-- Requires `basic-http-server` to be installed
+- Includes hot-reload for development
+- Requires `trunk` to be installed
 
 ```bash
 ./scripts/serve.sh
 ```
 
-**Note**: Install the server first if needed:
+**Note**: Install trunk first if needed:
 ```bash
-cargo install basic-http-server
+cargo install trunk
 ```
 
 ## Documentation

@@ -1,21 +1,18 @@
-//! Main application component
+//! Main application component with layout
 
 use yew::prelude::*;
+use crate::components::{Header, Footer, Sidebar, Console};
 
 #[function_component(App)]
 pub fn app() -> Html {
     html! {
-        <div class="app-container">
-            <header class="app-header">
-                <h1>{ "IBM 1130 Emulator" }</h1>
-                <p>{ "Rust + Yew + WebAssembly" }</p>
-            </header>
-            <main class="app-main">
-                <div class="placeholder">
-                    <p>{ "Emulator UI will be implemented in Phase 7" }</p>
-                    <p>{ "Current: Phase 0 - Project scaffolding complete" }</p>
-                </div>
-            </main>
+        <div class="app-layout">
+            <Header />
+            <div class="app-body">
+                <Sidebar />
+                <Console />
+            </div>
+            <Footer />
         </div>
     }
 }

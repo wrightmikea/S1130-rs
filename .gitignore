@@ -160,8 +160,10 @@ $RECYCLE.BIN/
 
 # Rust-specific
 /target/
-Cargo.lock
 **/*.rs.bk
+
+# WASM build artifacts
+/pkg/
 
 # Trunk build output
 crates/s1130-ui/dist/

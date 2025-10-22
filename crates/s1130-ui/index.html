@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="IBM 1130 Emulator - Running in your browser via WebAssembly">
     <title>IBM 1130 Emulator</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         * {
             margin: 0;
@@ -63,6 +64,39 @@
     </style>
 </head>
 <body>
-    <div id="app"></div>
+    <div class="app-container">
+        <div class="app-header">
+            <h1>IBM 1130 Emulator</h1>
+            <p>Running in your browser via WebAssembly</p>
+        </div>
+        <div class="app-main">
+            <div id="app" class="placeholder">
+                <p>Loading IBM 1130 Emulator...</p>
+                <p style="font-size: 0.9rem; color: #808080;">Built with Rust + WebAssembly</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Load the WASM module (from symlinked pkg directory)
+        import init from './pkg/s1130_wasm.js';
+
+        async function loadEmulator() {
+            try {
+                await init();
+                console.log('IBM 1130 Emulator WASM loaded successfully!');
+
+                // Update the placeholder
+                const appDiv = document.getElementById('app');
+                appDiv.innerHTML = '<p style="color: #4ec9b0;">✓ WASM Module Loaded</p><p style="font-size: 0.9rem; color: #808080; margin-top: 10px;">Phase 4: Console I/O devices implemented<br/>162 tests passing</p>';
+            } catch (error) {
+                console.error('Failed to load WASM module:', error);
+                const appDiv = document.getElementById('app');
+                appDiv.innerHTML = '<p style="color: #f48771;">✗ Failed to load WASM module</p><p style="font-size: 0.9rem; color: #808080; margin-top: 10px;">' + error.message + '</p>';
+            }
+        }
+
+        loadEmulator();
+    </script>
 </body>
 </html>

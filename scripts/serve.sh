@@ -12,6 +12,6 @@ if ! command -v basic-http-server &> /dev/null; then
     exit 1
 fi
 
-# Serve from the UI crate directory
+# Serve from the UI crate directory (pkg is symlinked there)
 cd crates/s1130-ui
 basic-http-server -a 0.0.0.0:1130

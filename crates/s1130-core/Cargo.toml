@@ -14,6 +14,7 @@ serde.workspace = true
 [dev-dependencies]
 proptest = "1.4"
 criterion = "0.5"
+serde_json.workspace = true
 
 # Benchmarks will be added in Phase 2
 # [[bench]]

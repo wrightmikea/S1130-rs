@@ -29,7 +29,7 @@ impl Default for CpuContext {
 
 impl PartialEq for CpuContext {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.cpu, &other.cpu)
+        Rc::ptr_eq(&self.cpu, &other.cpu) && self.version == other.version
     }
 }
 

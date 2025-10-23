@@ -105,7 +105,7 @@ impl WasmCpu {
                 let state = self.inner.get_state();
                 Ok(serde_wasm_bindgen::to_value(&state).unwrap())
             }
-            Err(e) => Err(JsValue::from_str(&e.to_string()))
+            Err(e) => Err(JsValue::from_str(&e.to_string())),
         }
     }
 

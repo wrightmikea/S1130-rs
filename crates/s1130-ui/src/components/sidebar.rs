@@ -36,7 +36,8 @@ pub fn sidebar() -> Html {
             console::log!("[Sidebar] Run button clicked");
             {
                 let mut cpu = ctx.cpu.borrow_mut();
-                match cpu.run(100) {  // Run 100 instructions
+                match cpu.run(100) {
+                    // Run 100 instructions
                     Ok(_) => {
                         console::log!("[Sidebar] Run completed successfully");
                     }

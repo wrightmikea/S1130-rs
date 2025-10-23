@@ -29,7 +29,7 @@ This project is a complete rewrite of the S1130 IBM 1130 emulator, originally im
 - Tape devices
 - Line printer
 - Vector graphics displays (planned)
-- Web-based UI using Yew framework
+- **Web-based UI using Yew framework** ⚠️ *Work in progress - currently being ported from original C#/JS implementation. UI is partially functional but not feature-complete.*
 
 ## Architecture
 
@@ -114,6 +114,8 @@ cargo fmt --all
 ```
 
 ### WebAssembly Build
+
+⚠️ **Note**: The Yew-based web UI is currently a work in progress and is being ported from the original C#/JavaScript implementation. While functional, it is not feature-complete and may have bugs or missing functionality.
 
 The project includes helper scripts in the `./scripts/` directory:
 

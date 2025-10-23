@@ -9,44 +9,62 @@ pub fn sidebar() -> Html {
     let cpu_ctx = use_cpu();
 
     let on_step = {
-        let cpu_context = (*cpu_ctx).clone();
+        let ctx = cpu_ctx.clone();
         Callback::from(move |_: MouseEvent| {
             console::log!("[Sidebar] Step button clicked");
-            let mut cpu = cpu_context.cpu.borrow_mut();
-            match cpu.step() {
-                Ok(_) => {
-                    console::log!("[Sidebar] Step executed successfully");
-                }
-                Err(e) => {
-                    console::log!(format!("[Sidebar] Step error: {:?}", e));
+            {
+                let mut cpu = ctx.cpu.borrow_mut();
+                match cpu.step() {
+                    Ok(_) => {
+                        console::log!("[Sidebar] Step executed successfully");
+                    }
+                    Err(e) => {
+                        console::log!(format!("[Sidebar] Step error: {:?}", e));
+                    }
                 }
             }
+            // Trigger re-render by incrementing version
+            let mut new_ctx = (*ctx).clone();
+            new_ctx.version += 1;
+            ctx.set(new_ctx);
         })
     };
 
     let on_run = {
-        let cpu_context = (*cpu_ctx).clone();
+        let ctx = cpu_ctx.clone();
         Callback::from(move |_: MouseEvent| {
             console::log!("[Sidebar] Run button clicked");
-            let mut cpu = cpu_context.cpu.borrow_mut();
-            match cpu.run(100) {  // Run 100 instructions
-                Ok(_) => {
-                    console::log!("[Sidebar] Run completed successfully");
-                }
-                Err(e) => {
-                    console::log!(format!("[Sidebar] Run error: {:?}", e));
+            {
+                let mut cpu = ctx.cpu.borrow_mut();
+                match cpu.run(100) {  // Run 100 instructions
+                    Ok(_) => {
+                        console::log!("[Sidebar] Run completed successfully");
+                    }
+                    Err(e) => {
+                        console::log!(format!("[Sidebar] Run error: {:?}", e));
+                    }
                 }
             }
+            // Trigger re-render by incrementing version
+            let mut new_ctx = (*ctx).clone();
+            new_ctx.version += 1;
+            ctx.set(new_ctx);
         })
     };
 
     let on_reset = {
-        let cpu_context = (*cpu_ctx).clone();
+        let ctx = cpu_ctx.clone();
         Callback::from(move |_: MouseEvent| {
             console::log!("[Sidebar] Reset button clicked");
-            let mut cpu = cpu_context.cpu.borrow_mut();
-            cpu.reset();
+            {
+                let mut cpu = ctx.cpu.borrow_mut();
+                cpu.reset();
+            }
             console::log!("[Sidebar] CPU reset");
+            // Trigger re-render by incrementing version
+            let mut new_ctx = (*ctx).clone();
+            new_ctx.version += 1;
+            ctx.set(new_ctx);
         })
     };
 

@@ -9,12 +9,14 @@ use yew::prelude::*;
 #[derive(Clone)]
 pub struct CpuContext {
     pub cpu: Rc<RefCell<WasmCpu>>,
+    pub version: u32, // Incremented on each CPU state change to trigger re-renders
 }
 
 impl CpuContext {
     pub fn new() -> Self {
         Self {
             cpu: Rc::new(RefCell::new(WasmCpu::new())),
+            version: 0,
         }
     }
 }

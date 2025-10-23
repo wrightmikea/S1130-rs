@@ -49,7 +49,7 @@ pub fn assembler_view() -> Html {
         let status = status.clone();
         let error_count = error_count.clone();
         let success = success.clone();
-        let cpu_context = (*cpu_ctx).clone();
+        let ctx = cpu_ctx.clone();
 
         Callback::from(move |_: MouseEvent| {
             console::log!("[Assembler] Assemble button clicked");
@@ -61,7 +61,7 @@ pub fn assembler_view() -> Html {
             // Perform assembly
             console::log!("[Assembler] About to call cpu.assemble()");
             let result = {
-                let mut cpu = cpu_context.cpu.borrow_mut();
+                let mut cpu = ctx.cpu.borrow_mut();
                 console::log!("[Assembler] Got mutable borrow of CPU");
                 cpu.assemble(&code_str)
             };
@@ -121,6 +121,11 @@ pub fn assembler_view() -> Html {
                     output.set(format!("✗ Assembly failed\n\n{:?}", e));
                 }
             }
+
+            // Trigger re-render by incrementing version
+            let mut new_ctx = (*ctx).clone();
+            new_ctx.version += 1;
+            ctx.set(new_ctx);
         })
     };
 

@@ -49,10 +49,20 @@ pub fn parse_source(source: &str) -> Result<Vec<ParsedLine>> {
 
 /// Parse a single line
 fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
-    let line = line.trim();
+    // Don't trim initially - we need to check for leading whitespace
+    let original_line = line;
 
-    // Skip empty lines and comments
-    if line.is_empty() || line.starts_with('*') {
+    // Skip empty lines
+    if original_line.trim().is_empty() {
+        return Ok(ParsedLine {
+            label: None,
+            operation: Operation::None,
+            operand: None,
+        });
+    }
+
+    // Check for full-line comment (starts with *)
+    if original_line.trim_start().starts_with('*') {
         return Ok(ParsedLine {
             label: None,
             operation: Operation::None,
@@ -61,18 +71,25 @@ fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
     }
 
     // Strip inline comments (everything after first '*' that's not at position 0)
-    let line = if let Some(comment_pos) = line.find('*') {
+    let line_without_comment = if let Some(comment_pos) = original_line.find('*') {
         if comment_pos > 0 {
-            line[..comment_pos].trim()
+            &original_line[..comment_pos]
         } else {
-            line
+            original_line
         }
     } else {
-        line
+        original_line
     };
 
-    // Split line into tokens
-    let parts: Vec<&str> = line.split_whitespace().collect();
+    // Check if line starts with whitespace to determine if there's a label
+    let has_leading_whitespace = line_without_comment
+        .chars()
+        .next()
+        .map(|c| c.is_whitespace())
+        .unwrap_or(false);
+
+    // Now split into tokens (this will trim each token)
+    let parts: Vec<&str> = line_without_comment.split_whitespace().collect();
 
     if parts.is_empty() {
         return Ok(ParsedLine {
@@ -86,15 +103,20 @@ fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
     let mut operation = Operation::None;
     let mut operand = None;
 
-    // First token could be a label or instruction
-    let first = parts[0];
+    if has_leading_whitespace {
+        // No label - line starts with whitespace
+        // First token is operation
+        let first = parts[0];
 
-    if is_instruction(first) || is_pseudo_op(first) {
-        // No label, starts with operation
         if is_instruction(first) {
             operation = Operation::Instruction(first.to_uppercase());
-        } else {
+        } else if is_pseudo_op(first) {
             operation = Operation::PseudoOp(first.to_uppercase());
+        } else {
+            return Err(AssemblerError::SyntaxError {
+                line: line_num,
+                message: format!("Expected instruction or pseudo-op, got: {}", first),
+            });
         }
 
         // Rest is operand
@@ -102,8 +124,8 @@ fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
             operand = Some(parts[1..].join(" "));
         }
     } else {
-        // First token is a label
-        label = Some(first.to_string());
+        // Line starts with non-whitespace - first token is label
+        label = Some(parts[0].to_string());
 
         if parts.len() > 1 {
             let second = parts[1];
@@ -127,6 +149,7 @@ fn parse_line(line: &str, line_num: usize) -> Result<ParsedLine> {
                 });
             }
         }
+        // If only one token (label only), operation stays None
     }
 
     Ok(ParsedLine {
@@ -184,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_parse_simple_instruction() {
-        let line = parse_line("LD 100", 1).unwrap();
+        let line = parse_line("    LD 100", 1).unwrap();
         assert!(line.label.is_none());
         assert!(matches!(line.operation, Operation::Instruction(_)));
         assert_eq!(line.operand, Some("100".to_string()));
@@ -200,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_parse_pseudo_op() {
-        let line = parse_line("ORG 0x100", 1).unwrap();
+        let line = parse_line("    ORG 0x100", 1).unwrap();
         assert!(line.label.is_none());
         assert!(matches!(line.operation, Operation::PseudoOp(_)));
         assert_eq!(line.operand, Some("0x100".to_string()));
@@ -227,13 +250,13 @@ mod tests {
 
     #[test]
     fn test_parse_indirect_operand() {
-        let line = parse_line("LD /100", 1).unwrap();
+        let line = parse_line("    LD /100", 1).unwrap();
         assert_eq!(line.operand, Some("/100".to_string()));
     }
 
     #[test]
     fn test_parse_indexed_operand() {
-        let line = parse_line("LD 100,1", 1).unwrap();
+        let line = parse_line("    LD 100,1", 1).unwrap();
         assert_eq!(line.operand, Some("100,1".to_string()));
     }
 }

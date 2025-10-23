@@ -467,20 +467,35 @@ impl Assembler {
         }
 
         // Parse numeric literal
-        if expr.starts_with("0X") || expr.starts_with("0x") {
-            // Hexadecimal
+        if expr.starts_with('/') && expr.len() > 1 {
+            // IBM 1130 hexadecimal notation: /NNNN
+            let hex_str = &expr[1..];
+            // Validate all characters are hex digits
+            if hex_str.chars().all(|c| c.is_ascii_hexdigit()) {
+                u16::from_str_radix(hex_str, 16).map_err(|_| AssemblerError::SyntaxError {
+                    line: line_num + 1,
+                    message: format!("Invalid hex literal: {}", expr),
+                })
+            } else {
+                Err(AssemblerError::SyntaxError {
+                    line: line_num + 1,
+                    message: format!("Invalid hex literal (non-hex digits): {}", expr),
+                })
+            }
+        } else if expr.starts_with("0X") || expr.starts_with("0x") {
+            // Alternative hexadecimal format: 0xNNNN
             u16::from_str_radix(&expr[2..], 16).map_err(|_| AssemblerError::SyntaxError {
                 line: line_num + 1,
                 message: format!("Invalid hex literal: {}", expr),
             })
         } else if expr.starts_with('0') && expr.len() > 1 {
-            // Octal
+            // Octal: 0NNN (leading zero)
             u16::from_str_radix(&expr[1..], 8).map_err(|_| AssemblerError::SyntaxError {
                 line: line_num + 1,
                 message: format!("Invalid octal literal: {}", expr),
             })
         } else {
-            // Decimal (or try as symbol first)
+            // Decimal
             expr.parse::<u16>()
                 .map_err(|_| AssemblerError::SyntaxError {
                     line: line_num + 1,

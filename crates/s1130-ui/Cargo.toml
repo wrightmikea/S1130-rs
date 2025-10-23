@@ -11,7 +11,7 @@ description = "Yew-based web UI for S1130 emulator"
 s1130-wasm = { path = "../s1130-wasm" }
 yew = { version = "0.21", features = ["csr"] }
 wasm-bindgen = "0.2"
-web-sys = "0.3"
+web-sys = { version = "0.3", features = ["HtmlSelectElement"] }
 gloo = "0.11"
 serde.workspace = true
 serde_json.workspace = true

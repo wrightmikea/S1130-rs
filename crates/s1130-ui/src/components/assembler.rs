@@ -1,6 +1,7 @@
 //! Assembler view - editor and output
 
 use crate::cpu_context::use_cpu;
+use gloo::console;
 use serde::Deserialize;
 use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
@@ -22,7 +23,7 @@ struct AssemblyResult {
 #[function_component(AssemblerView)]
 pub fn assembler_view() -> Html {
     let cpu_ctx = use_cpu();
-    let sample_code = "*\n* Sample IBM 1130 Assembly Program\n*\n    ORG  /100\nSTART LDX 1 COUNT\n    LD  A+1\n    A   A\n    STO A+1\n    MDX 1 -1\n    BNZ START\n    WAIT\n\nA    DC  1\nCOUNT DC  10\n    END START\n";
+    let sample_code = "*\n* Simple Addition Program\n* Adds two numbers and stores result\n*\n        ORG  /0100\n        LD   A\n        A    B\n        STO  C\n        WAIT\n\nA       DC   /0005\nB       DC   /0003\nC       DC   0\n        END  /0100\n";
 
     let code = use_state(|| sample_code.to_string());
     let output = use_state(|| "Ready to assemble...".to_string());
@@ -48,18 +49,34 @@ pub fn assembler_view() -> Html {
         let status = status.clone();
         let error_count = error_count.clone();
         let success = success.clone();
-        let cpu_ctx = cpu_ctx.clone();
+        let cpu_context = (*cpu_ctx).clone();
 
         Callback::from(move |_: MouseEvent| {
+            console::log!("[Assembler] Assemble button clicked");
             status.set("Assembling...".to_string());
-            output.set("Assembling source code...\n".to_string());
 
-            let mut cpu = cpu_ctx.cpu.borrow_mut();
-            match cpu.assemble(&code) {
+            let code_str = (*code).clone();
+            console::log!(format!("[Assembler] Code length: {} chars", code_str.len()));
+
+            // Perform assembly
+            console::log!("[Assembler] About to call cpu.assemble()");
+            let result = {
+                let mut cpu = cpu_context.cpu.borrow_mut();
+                console::log!("[Assembler] Got mutable borrow of CPU");
+                cpu.assemble(&code_str)
+            };
+            console::log!("[Assembler] Assembly call returned");
+
+            match result {
                 Ok(result_value) => {
+                    console::log!("[Assembler] Got Ok result from WASM");
                     if let Ok(result) =
                         serde_wasm_bindgen::from_value::<AssemblyResult>(result_value)
                     {
+                        console::log!(format!(
+                            "[Assembler] Deserialized result, success={}",
+                            result.success
+                        ));
                         if result.success {
                             success.set(true);
                             error_count.set(0);
@@ -88,9 +105,16 @@ pub fn assembler_view() -> Html {
                             }
                             output.set(msg);
                         }
+                    } else {
+                        console::log!("[Assembler] Failed to deserialize result");
+                        success.set(false);
+                        error_count.set(1);
+                        status.set("Error".to_string());
+                        output.set("Failed to deserialize assembly result".to_string());
                     }
                 }
                 Err(e) => {
+                    console::log!(format!("[Assembler] Got Err result: {:?}", e));
                     success.set(false);
                     error_count.set(1);
                     status.set("Error".to_string());

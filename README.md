@@ -174,6 +174,15 @@ This project is currently under active development. Contributions, bug reports, 
 
 ## References
 
-- IBM 1130 Functional Characteristics Manual
-- IBM 1130 Principles of Operation
+### IBM 1130 Documentation
+- [IBM 1130 Assembler Language Manual (C26-5927-2, 1966)](https://bitsavers.org/pdf/ibm/1130/lang/C26-5927-2_1130_Assembler_Language_1966.pdf) - Official assembler syntax and conventions
+- [IBM 1130 Functional Characteristics](https://ibm1130.net/functional/) - CPU instruction reference and system architecture
+- [Bitsavers IBM 1130 Collection](https://bitsavers.org/pdf/ibm/1130/) - Complete archive of IBM 1130 manuals and documentation
+
+### Emulators and Tools
+- [SIMH IBM 1130 Emulator](https://github.com/simh/simh/tree/master/Ibm1130) - Cross-assembler (asm1130) and emulator implementation
+- [IBM1130.org Documentation](http://ibm1130.org) - IBM 1130 preservation project
+
+### Project Documentation
 - Original S1130 emulator documentation (see `archive/`)
+- [Research Notes](./docs/research.md) - IBM 1130 assembler conventions research

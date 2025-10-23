@@ -5,10 +5,12 @@ use yew::prelude::*;
 #[function_component(MemoryView)]
 pub fn memory_view() -> Html {
     // Sample memory data (will be replaced with actual CPU memory later)
-    let memory_lines = (0..16).map(|i| {
-        let addr = i * 8;
-        (addr, vec![0u16; 8])
-    }).collect::<Vec<_>>();
+    let memory_lines = (0..16)
+        .map(|i| {
+            let addr = i * 8;
+            (addr, vec![0u16; 8])
+        })
+        .collect::<Vec<_>>();
 
     html! {
         <div class="view-panel memory-view">

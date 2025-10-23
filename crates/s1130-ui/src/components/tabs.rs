@@ -41,7 +41,7 @@ pub struct TabsProps {
 
 #[function_component(Tabs)]
 pub fn tabs(props: &TabsProps) -> Html {
-    let tabs = vec![
+    let tabs = [
         TabId::ConsolePanel,
         TabId::Registers,
         TabId::Memory,
@@ -59,7 +59,7 @@ pub fn tabs(props: &TabsProps) -> Html {
 
                     html! {
                         <button
-                            class={classes!("tab-button", is_active.then(|| "active"))}
+                            class={classes!("tab-button", is_active.then_some("active"))}
                             onclick={move |_| on_click.emit(tab_id)}
                         >
                             <span class="tab-icon">{tab.icon()}</span>

@@ -12,7 +12,9 @@ fn main() {
         .to_string();
 
     // Get build timestamp
-    let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+    let timestamp = chrono::Utc::now()
+        .format("%Y-%m-%d %H:%M:%S UTC")
+        .to_string();
 
     // Get hostname
     let hostname = hostname::get()

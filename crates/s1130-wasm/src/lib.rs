@@ -59,6 +59,85 @@ impl WasmCpu {
             .filter_map(|addr| self.inner.read_memory(addr as usize).ok())
             .collect()
     }
+
+    /// Assemble source code and load into memory
+    #[wasm_bindgen]
+    pub fn assemble(&mut self, source: &str) -> Result<JsValue, JsValue> {
+        use s1130_core::assembler::Assembler;
+
+        let mut assembler = Assembler::new();
+        match assembler.assemble(source) {
+            Ok(program) => {
+                // Load program into memory starting at origin
+                for (i, word) in program.words.iter().enumerate() {
+                    let addr = program.origin as usize + i;
+                    if let Err(e) = self.inner.write_memory(addr, *word) {
+                        return Err(JsValue::from_str(&format!("Memory write error: {}", e)));
+                    }
+                }
+
+                // Return assembly result
+                let result = serde_json::json!({
+                    "success": true,
+                    "origin": program.origin,
+                    "entryPoint": program.entry_point,
+                    "codeSize": program.words.len(),
+                    "message": "Assembly successful"
+                });
+                Ok(serde_wasm_bindgen::to_value(&result).unwrap())
+            }
+            Err(error) => {
+                let result = serde_json::json!({
+                    "success": false,
+                    "errors": [error.to_string()],
+                    "message": "Assembly failed"
+                });
+                Ok(serde_wasm_bindgen::to_value(&result).unwrap())
+            }
+        }
+    }
+
+    /// Execute one instruction (step)
+    #[wasm_bindgen]
+    pub fn step(&mut self) -> Result<JsValue, JsValue> {
+        match self.inner.step() {
+            Ok(_) => {
+                let state = self.inner.get_state();
+                Ok(serde_wasm_bindgen::to_value(&state).unwrap())
+            }
+            Err(e) => Err(JsValue::from_str(&e.to_string()))
+        }
+    }
+
+    /// Run N instructions
+    #[wasm_bindgen]
+    pub fn run(&mut self, steps: u32) -> Result<JsValue, JsValue> {
+        for _ in 0..steps {
+            if let Err(e) = self.inner.step() {
+                return Err(JsValue::from_str(&e.to_string()));
+            }
+        }
+        let state = self.inner.get_state();
+        Ok(serde_wasm_bindgen::to_value(&state).unwrap())
+    }
+
+    /// Get CPU registers as formatted strings
+    #[wasm_bindgen(js_name = getRegisters)]
+    pub fn get_registers(&self) -> JsValue {
+        let state = self.inner.get_state();
+        let registers = serde_json::json!({
+            "iar": format!("0x{:04X}", state.iar),
+            "acc": format!("0x{:04X}", state.acc),
+            "ext": format!("0x{:04X}", state.ext),
+            "xr1": format!("0x{:04X}", state.xr1),
+            "xr2": format!("0x{:04X}", state.xr2),
+            "xr3": format!("0x{:04X}", state.xr3),
+            "carry": state.carry,
+            "overflow": state.overflow,
+            "instructionCount": state.instruction_count
+        });
+        serde_wasm_bindgen::to_value(&registers).unwrap()
+    }
 }
 
 impl Default for WasmCpu {

@@ -2,6 +2,7 @@
 
 mod app;
 mod components;
+mod cpu_context;
 
 use app::App;
 

@@ -1,7 +1,9 @@
 //! Console component with tabbed interface
 
+use crate::components::{
+    AssemblerView, ConsolePanel, IoDevicesView, MemoryView, RegistersView, TabId, Tabs,
+};
 use yew::prelude::*;
-use crate::components::{Tabs, TabId, ConsolePanel, RegistersView, MemoryView, AssemblerView, IoDevicesView};
 
 #[function_component(Console)]
 pub fn console() -> Html {

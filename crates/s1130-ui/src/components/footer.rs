@@ -15,7 +15,7 @@ pub fn footer() -> Html {
                     { format!("Build: {} @ {} | {}", git_sha, hostname, timestamp) }
                 </span>
                 <span class="phase-info">
-                    { "Phase 4: Console I/O • 162 tests passing" }
+                    { "Development: UI Complete, Integrating WASM • 161 tests passing" }
                 </span>
             </div>
         </footer>

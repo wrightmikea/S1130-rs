@@ -1,9 +1,55 @@
 //! Sidebar component with controls and status
 
+use crate::cpu_context::use_cpu;
+use gloo::console;
 use yew::prelude::*;
 
 #[function_component(Sidebar)]
 pub fn sidebar() -> Html {
+    let cpu_ctx = use_cpu();
+
+    let on_step = {
+        let cpu_context = (*cpu_ctx).clone();
+        Callback::from(move |_: MouseEvent| {
+            console::log!("[Sidebar] Step button clicked");
+            let mut cpu = cpu_context.cpu.borrow_mut();
+            match cpu.step() {
+                Ok(_) => {
+                    console::log!("[Sidebar] Step executed successfully");
+                }
+                Err(e) => {
+                    console::log!(format!("[Sidebar] Step error: {:?}", e));
+                }
+            }
+        })
+    };
+
+    let on_run = {
+        let cpu_context = (*cpu_ctx).clone();
+        Callback::from(move |_: MouseEvent| {
+            console::log!("[Sidebar] Run button clicked");
+            let mut cpu = cpu_context.cpu.borrow_mut();
+            match cpu.run(100) {  // Run 100 instructions
+                Ok(_) => {
+                    console::log!("[Sidebar] Run completed successfully");
+                }
+                Err(e) => {
+                    console::log!(format!("[Sidebar] Run error: {:?}", e));
+                }
+            }
+        })
+    };
+
+    let on_reset = {
+        let cpu_context = (*cpu_ctx).clone();
+        Callback::from(move |_: MouseEvent| {
+            console::log!("[Sidebar] Reset button clicked");
+            let mut cpu = cpu_context.cpu.borrow_mut();
+            cpu.reset();
+            console::log!("[Sidebar] CPU reset");
+        })
+    };
+
     html! {
         <aside class="app-sidebar">
             <section class="sidebar-section">
@@ -34,17 +80,17 @@ pub fn sidebar() -> Html {
                     <button class="control-btn" disabled=true>
                         { "Load Program" }
                     </button>
-                    <button class="control-btn" disabled=true>
+                    <button class="control-btn" onclick={on_run}>
                         { "Run" }
                     </button>
-                    <button class="control-btn" disabled=true>
+                    <button class="control-btn" onclick={on_step}>
                         { "Step" }
                     </button>
-                    <button class="control-btn" disabled=true>
+                    <button class="control-btn" onclick={on_reset}>
                         { "Reset" }
                     </button>
                 </div>
-                <p class="sidebar-note">{ "Controls coming in Phase 7" }</p>
+                <p class="sidebar-note">{ "Step, Run, and Reset now functional!" }</p>
             </section>
 
             <section class="sidebar-section">

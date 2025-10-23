@@ -4,7 +4,23 @@
 //! allowing the emulator to run in web browsers.
 
 use s1130_core::Cpu;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
+
+/// Result of assembly operation
+#[derive(Serialize)]
+struct AssemblyResult {
+    success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    origin: Option<u16>,
+    #[serde(rename = "entryPoint", skip_serializing_if = "Option::is_none")]
+    entry_point: Option<u16>,
+    #[serde(rename = "codeSize", skip_serializing_if = "Option::is_none")]
+    code_size: Option<usize>,
+    message: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    errors: Vec<String>,
+}
 
 /// WASM wrapper for CPU
 #[wasm_bindgen]
@@ -63,11 +79,20 @@ impl WasmCpu {
     /// Assemble source code and load into memory
     #[wasm_bindgen]
     pub fn assemble(&mut self, source: &str) -> Result<JsValue, JsValue> {
+        web_sys::console::log_1(&"[WASM] assemble() called".into());
         use s1130_core::assembler::Assembler;
 
         let mut assembler = Assembler::new();
+        web_sys::console::log_1(&"[WASM] Assembler created, calling assemble()".into());
         match assembler.assemble(source) {
             Ok(program) => {
+                web_sys::console::log_1(
+                    &format!(
+                        "[WASM] Assembly successful, loading {} words",
+                        program.words.len()
+                    )
+                    .into(),
+                );
                 // Load program into memory starting at origin
                 for (i, word) in program.words.iter().enumerate() {
                     let addr = program.origin as usize + i;
@@ -76,22 +101,43 @@ impl WasmCpu {
                     }
                 }
 
+                // Set IAR to entry point, or origin if not specified
+                let iar_address = program.entry_point.unwrap_or(program.origin);
+                self.inner.set_iar(iar_address);
+                web_sys::console::log_1(
+                    &format!(
+                        "[WASM] Set IAR to 0x{:04X} ({})",
+                        iar_address,
+                        if program.entry_point.is_some() {
+                            "entry point"
+                        } else {
+                            "origin"
+                        }
+                    )
+                    .into(),
+                );
+
                 // Return assembly result
-                let result = serde_json::json!({
-                    "success": true,
-                    "origin": program.origin,
-                    "entryPoint": program.entry_point,
-                    "codeSize": program.words.len(),
-                    "message": "Assembly successful"
-                });
+                let result = AssemblyResult {
+                    success: true,
+                    origin: Some(program.origin),
+                    entry_point: program.entry_point,
+                    code_size: Some(program.words.len()),
+                    message: "Assembly successful".to_string(),
+                    errors: vec![],
+                };
                 Ok(serde_wasm_bindgen::to_value(&result).unwrap())
             }
             Err(error) => {
-                let result = serde_json::json!({
-                    "success": false,
-                    "errors": [error.to_string()],
-                    "message": "Assembly failed"
-                });
+                web_sys::console::log_1(&format!("[WASM] Assembly failed: {}", error).into());
+                let result = AssemblyResult {
+                    success: false,
+                    origin: None,
+                    entry_point: None,
+                    code_size: None,
+                    message: "Assembly failed".to_string(),
+                    errors: vec![error.to_string()],
+                };
                 Ok(serde_wasm_bindgen::to_value(&result).unwrap())
             }
         }
